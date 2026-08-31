@@ -32,11 +32,18 @@ try:
 except ImportError:  # pragma: no cover
     HAS_AIOHTTP = False
 
+# 16 резолверов: первый прогон (1.6M доменов) упирался в рейт-лимиты
+# при 512 воркерах на 8 серверах (~23% error); расширили пул и снизили
+# параллелизм в workflow (200 воркеров -> ~12 одновременных на сервер).
 PUBLIC_RESOLVERS = [
-    "1.1.1.1", "1.0.0.1",           # Cloudflare
+    "1.1.1.1", "1.0.0.1",            # Cloudflare
     "8.8.8.8", "8.8.4.4",            # Google
     "9.9.9.9", "149.112.112.112",    # Quad9
     "77.88.8.8", "77.88.8.1",        # Yandex (RU)
+    "208.67.222.222", "208.67.220.220",  # OpenDNS
+    "94.140.14.14", "94.140.15.15",  # AdGuard DNS
+    "185.228.168.9", "185.228.169.9",  # CleanBrowsing
+    "64.6.64.6", "64.6.65.6",        # Verisign
 ]
 
 # NS, типичные для «запаркованных» доменов (по мотивам step2 Re-filter, расширяемо).
@@ -109,7 +116,7 @@ def collect_ips_from_cache(cache: dict) -> list[str]:
     return ips
 
 
-async def _resolve_a(domain: str, resolver_ip: str, lifetime: float = 4.0) -> dict:
+async def _resolve_a(domain: str, resolver_ip: str, lifetime: float = 3.0) -> dict:
     resolver = dns.asyncresolver.Resolver(configure=False)
     resolver.nameservers = [resolver_ip]
     resolver.lifetime = lifetime
@@ -125,7 +132,7 @@ async def _resolve_a(domain: str, resolver_ip: str, lifetime: float = 4.0) -> di
         return {"rcode": "ERROR", "ips": []}
 
 
-async def _resolve_ns(domain: str, resolver_ip: str, lifetime: float = 4.0) -> list[str]:
+async def _resolve_ns(domain: str, resolver_ip: str, lifetime: float = 3.0) -> list[str]:
     resolver = dns.asyncresolver.Resolver(configure=False)
     resolver.nameservers = [resolver_ip]
     resolver.lifetime = lifetime

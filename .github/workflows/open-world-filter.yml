@@ -39,7 +39,7 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -64,8 +64,8 @@ jobs:
           else
             echo 'No previous release yet — first build.'
           fi
-      - name: Full pipeline + provenance
-        run: python -m pipeline all --provenance --workers 512 --verbose
+      - name: Full pipeline + provenance (--no-ns: без паркинг-детекта в CI, быстрее в ~1.5x)
+        run: python -m pipeline all --provenance --workers 200 --no-ns --verbose
       - name: Prepare converter inputs (geo-dat)
         run: python -m pipeline geo-dat
       - name: routeforge build — rule-sets + профили (Throne/sing-box/Hiddify)
