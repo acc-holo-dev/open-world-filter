@@ -145,6 +145,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: owf-rule-sets
+          path: owf-rule-sets
       - name: Stage build output (artifact -> ./out)
         shell: bash
         run: cp -r owf-rule-sets/out out
@@ -182,9 +183,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: owf-rule-sets
+          path: owf-rule-sets
       - uses: actions/download-artifact@v4
         with:
           name: owf-geo
+          path: owf-geo
       - name: Flatten artifacts into staging
         shell: bash
         run: |
@@ -224,6 +227,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: owf-rule-sets
+          path: owf-rule-sets
       - name: Assemble site (index + provenance)
         run: |
           python -m pipeline subscriptions
