@@ -83,6 +83,8 @@
 
 ## Команды конвейера
 
+    collect        только скачать источники -> raw-entries.jsonl
+    classify       только применить исключения -> entries.jsonl (шаг build = collect + classify)
     build          скачать источники -> исключения -> entries.jsonl (provenance)
     probe          DNS/NS пробы; кэш out/probe-cache.json (инкрементально, TTL по статусу)
                    --limit N --workers N --https --no-ns

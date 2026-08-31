@@ -1,6 +1,6 @@
 # Open World Filter — конвейер данных + rule-sets + подписки + релиз + Pages.
 # Standalone-репозиторий: корень = проект. Джобы: test -> build -> (convert -> release) | pages.
-# routeforge ставится из пир-репозитория acc-holo-dev/throne-route-forge (git install).
+# routeforge vendored в ./routeforge (приватный пир-репо недоступен раннерам).
 # Релиз публикуется на тег owf-latest.
 
 name: Open World Filter
@@ -208,7 +208,7 @@ jobs:
           done
           rm -f staging/checksums.txt
           # checksums по фактическому составу релиза (оба исхода имели одинаковое имя — пересчёт сверху надёжнее)
-          find staging -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > staging/checksums.txt
+          find staging -maxdepth 1 -type f ! -name checksums.txt -print0 | sort -z | xargs -0 sha256sum > staging/checksums.txt
           ls -la staging
       - name: Publish owf-latest release
         uses: softprops/action-gh-release@v2
