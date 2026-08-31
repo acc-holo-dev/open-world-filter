@@ -46,6 +46,14 @@ PUBLIC_RESOLVERS = [
     "64.6.64.6", "64.6.65.6",        # Verisign
 ]
 
+# DNS-over-HTTPS (JSON API) — основной путь: UDP:53 с раннеров GitHub упирается
+# в рейт-лимиты резолверов (~23% error при 512 воркерах); по HTTPS с keep-alive
+# запросы идут на порядки быстрее и стабильнее. UDP остаётся запасным.
+DOH_RESOLVERS = [
+    "https://cloudflare-dns.com/dns-query",
+    "https://dns.google/resolve",
+]
+
 # NS, типичные для «запаркованных» доменов (по мотивам step2 Re-filter, расширяемо).
 PARKED_NS_PATTERNS = [
     "parking", "parked", "sedoparking", "bodis", "hugedomains", "afternic",
@@ -132,6 +140,35 @@ async def _resolve_a(domain: str, resolver_ip: str, lifetime: float = 3.0) -> di
         return {"rcode": "ERROR", "ips": []}
 
 
+def parse_doh_json(payload: dict) -> dict:
+    """Разбирает ответ DoH JSON API (Cloudflare/Google): rcode/ips.
+
+    Status: 0 = NOERROR, 3 = NXDOMAIN, прочее (2=SERVFAIL и т.п.) = error.
+    Учитываем только A-записи (type=1); CNAME в выдаче не считаем.
+    """
+    try:
+        status = int(payload.get("Status", 2))
+    except (TypeError, ValueError):
+        return {"rcode": "ERROR", "ips": []}
+    if status == 3:
+        return {"rcode": "NXDOMAIN", "ips": []}
+    if status != 0:
+        return {"rcode": "ERROR", "ips": []}
+    ips = sorted({str(a["data"]) for a in payload.get("Answer", []) if a.get("type") == 1})
+    return {"rcode": "NOERROR", "ips": ips}
+
+
+async def _resolve_a_doh(domain: str, url: str, session, lifetime: float = 15.0) -> dict:
+    """DNS-over-HTTPS (application/dns-json). Возвращает dict как _resolve_a."""
+    try:
+        async with session.get(url, params={"name": domain, "type": "A"}, timeout=lifetime) as resp:
+            if resp.status != 200:
+                return {"rcode": "ERROR", "ips": []}
+            return parse_doh_json(await resp.json())
+    except Exception:  # noqa: BLE001 — сеть/таймаут: это статус error, не падение
+        return {"rcode": "ERROR", "ips": []}
+
+
 async def _resolve_ns(domain: str, resolver_ip: str, lifetime: float = 3.0) -> list[str]:
     resolver = dns.asyncresolver.Resolver(configure=False)
     resolver.nameservers = [resolver_ip]
@@ -159,13 +196,22 @@ async def _https_probe(domain: str, timeout: float = 8.0) -> str:
 
 
 async def _probe_one(domain: str, resolvers: list[str], https: bool, ns_check: bool,
-                     sem: asyncio.Semaphore) -> dict:
+                     sem: asyncio.Semaphore, session=None) -> dict:
     async with sem:
-        first = random.choice(resolvers)
-        result = await _resolve_a(domain, first)
-        if result["rcode"] == "ERROR" and len(resolvers) > 1:
-            second = random.choice([r for r in resolvers if r != first] or resolvers)
-            result = await _resolve_a(domain, second)
+        result = {"rcode": "ERROR", "ips": []}
+        if session is not None:
+            servers = list(DOH_RESOLVERS)
+            first = random.choice(servers)
+            result = await _resolve_a_doh(domain, first, session)
+            if result["rcode"] == "ERROR" and len(servers) > 1:
+                second = random.choice([s for s in servers if s != first])
+                result = await _resolve_a_doh(domain, second, session)
+        if result["rcode"] == "ERROR" and resolvers:
+            first = random.choice(resolvers)
+            result = await _resolve_a(domain, first)
+            if result["rcode"] == "ERROR" and len(resolvers) > 1:
+                second = random.choice([r for r in resolvers if r != first])
+                result = await _resolve_a(domain, second)
         status = classify_dns(result["rcode"], len(result["ips"]))
         ns: list[str] = []
         parked = False
@@ -209,8 +255,18 @@ async def probe_domains(domains: list[str], cache: dict, *, workers: int = 256,
     stats = {"domains": len(domains), "cached": cached, "probed": 0,
              "alive": 0, "empty": 0, "dead": 0, "error": 0, "parked": 0}
 
+    session = None
+    connector = None
+    if HAS_AIOHTTP:
+        connector = aiohttp.TCPConnector(limit=512)
+        session = aiohttp.ClientSession(
+            connector=connector,
+            timeout=aiohttp.ClientTimeout(total=20),
+            headers={"Accept": "application/dns-json"},
+        )
+
     async def run_one(domain: str) -> None:
-        record = await _probe_one(domain, servers, https, ns_check, sem)
+        record = await _probe_one(domain, servers, https, ns_check, sem, session)
         cache[domain] = record
         stats["probed"] += 1
         stats[record["status"]] += 1
@@ -220,5 +276,11 @@ async def probe_domains(domains: list[str], cache: dict, *, workers: int = 256,
             print(f"  probe progress: {stats['probed']}/{len(todo)} "
                   f"(alive={stats['alive']} dead={stats['dead']} error={stats['error']})", flush=True)
 
-    await asyncio.gather(*(run_one(d) for d in todo))
+    try:
+        await asyncio.gather(*(run_one(d) for d in todo))
+    finally:
+        if connector is not None:
+            await connector.close()
+        if session is not None:
+            await session.close()
     return stats

@@ -65,7 +65,7 @@ jobs:
             echo 'No previous release yet — first build.'
           fi
       - name: Full pipeline + provenance (no-ns on CI, faster first run)
-        run: python -m pipeline all --provenance --workers 200 --no-ns --verbose
+        run: python -m pipeline all --provenance --workers 300 --no-ns --verbose
       - name: Prepare converter inputs (geo-dat)
         run: python -m pipeline geo-dat
       - name: routeforge build — rule-sets + профили (Throne/sing-box/Hiddify)
