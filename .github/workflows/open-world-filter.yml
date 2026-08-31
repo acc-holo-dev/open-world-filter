@@ -152,8 +152,15 @@ jobs:
 
       - name: Build xray-geoip (geoip.dat)
         run: |
+          set -x
           python -m pipeline geo-dat
-          cd tools/xray-geoip && go build -o ../../out/xray-geoip .
+          cd tools/xray-geoip
+          go build -o xray-geoip .
+          ls -la xray-geoip
+          cp xray-geoip ../../out/xray-geoip
+          cd ../..
+          ls -la out/xray-geoip
+          chmod +x out/xray-geoip
           ./out/xray-geoip -c out/convert-input/owf-geoip.json
           mkdir -p release-assets
           cp out/geo-dat/geoip.dat release-assets/geoip.dat
