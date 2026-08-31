@@ -1,7 +1,10 @@
 import unittest
 
 from pipeline.subscriptions import (
-    render_clash, render_manifest, render_site, render_v2rayn,
+    render_clash,
+    render_manifest,
+    render_site,
+    render_v2rayn,
 )
 
 

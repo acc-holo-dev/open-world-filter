@@ -107,7 +107,7 @@ def collect_source(src: Source, root: Path, offline: bool = False) -> tuple[list
 
     now = utcnow_iso()
     if src.kind == "exclusions":
-        entries = [e for e in (_parse_exclusion_line(l, src, now) for l in lines) if e is not None]
+        entries = [e for e in (_parse_exclusion_line(line, src, now) for line in lines) if e is not None]
         return entries, None
 
     evidence = Evidence(source=src.name, fetched_at=now, url=src.url, reason=src.evidence or None)

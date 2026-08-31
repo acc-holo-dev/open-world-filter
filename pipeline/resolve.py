@@ -8,8 +8,6 @@ from __future__ import annotations
 import urllib.request
 from pathlib import Path
 
-from .probe import collect_ips_from_cache
-
 try:
     import geoip2.database
     HAS_GEOIP2 = True

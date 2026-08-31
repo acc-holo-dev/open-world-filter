@@ -38,8 +38,8 @@ def prepare_generator_input(ips_path: Path, domains_path: Path, out_dir: Path,
     written: list = []
     if ips_path.exists():
         if only_ipv4:
-            lines = [l for l in ips_path.read_text(encoding="utf-8").splitlines()
-                     if l.strip() and ":" not in l]
+            lines = [line for line in ips_path.read_text(encoding="utf-8").splitlines()
+                     if line.strip() and ":" not in line]
             ip_target.write_text("\n".join(lines) + "\n", encoding="utf-8")
         else:
             shutil.copyfile(ips_path, ip_target)

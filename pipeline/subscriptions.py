@@ -105,12 +105,12 @@ def render_site(manifest: dict) -> str:
         "<!doctype html>",
         '<html lang="ru"><head><meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
-        f"<title>Open World Filter — реестр блокировок РКН / RKN blocklist</title>",
+        "<title>Open World Filter — реестр блокировок РКН / RKN blocklist</title>",
         "<style>body{font-family:system-ui,sans-serif;max-width:860px;margin:2rem auto;padding:0 1rem;line-height:1.55}"
         "a{color:#1a6fb0}code{background:#f2f2f2;padding:.1em .35em;border-radius:4px;font-size:.92em}"
         "h2{border-bottom:1px solid #ddd;padding-bottom:.2rem}</style>",
         "</head><body>",
-        f'<h1>🌍 Open World Filter</h1>',
+        '<h1>🌍 Open World Filter</h1>',
         "<p>Свежие списки блокировок РКН и ресурсов, недоступных из РФ, с полной историей происхождения. ",
         f'<a href="{repo_url}">Репозиторий</a>.</p>',
         "<hr>",

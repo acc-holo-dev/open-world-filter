@@ -69,7 +69,8 @@ def build_parser() -> argparse.ArgumentParser:
     all_p.add_argument("--workers", type=int, default=256, help="параллелизм проб (по умолчанию 256)")
     all_p.add_argument("--https", action="store_true", help="дополнительно HTTPS HEAD-проб")
     all_p.add_argument("--no-ns", action="store_true", help="не проверять NS")
-    all_p.add_argument("--provenance", action="store_true", help="писать out/provenance.json.gz (страница «почему в базе»)")
+    all_p.add_argument("--provenance", action="store_true",
+                       help="писать out/provenance.json.gz (страница «почему в базе»)")
     add_common(all_p)
 
     probe_p = sub.add_parser("probe", help="пробы доступности: DNS/NS (+ опционально HTTPS)")
@@ -81,20 +82,26 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(probe_p)
 
     resolve_p = sub.add_parser("resolve", help="IP-инвентарь: кэш проб + IP-источники")
-    resolve_p.add_argument("--download-geolite", action="store_true", help="скачать GeoLite2-ASN.mmdb (для ASN-аннотации)")
-    resolve_p.add_argument("--geolite-mmdb", type=Path, default=None, help="путь к mmdb (по умолчанию tools/GeoLite2-ASN.mmdb)")
+    resolve_p.add_argument("--download-geolite", action="store_true",
+                           help="скачать GeoLite2-ASN.mmdb (для ASN-аннотации)")
+    resolve_p.add_argument("--geolite-mmdb", type=Path, default=None,
+                           help="путь к mmdb (по умолчанию tools/GeoLite2-ASN.mmdb)")
     add_common(resolve_p)
 
     add_common(sub.add_parser("summarize", help="IP -> CIDR (с учётом ASN, если есть asn-map.json)"))
 
     emit_p = sub.add_parser("emit", help="итоговые списки + forge.toml для routeforge")
-    emit_p.add_argument("--keep-dead", action="store_true", help="не выбрасывать dead-домены (политика по умолчанию: выбрасывать)")
+    emit_p.add_argument("--keep-dead", action="store_true",
+                        help="не выбрасывать dead-домены (политика по умолчанию: выбрасывать)")
     emit_p.add_argument("--owner", default=DEFAULT_OWNER, help=f"GitHub-владелец (по умолчанию {DEFAULT_OWNER})")
     emit_p.add_argument("--repo", default=DEFAULT_REPO, help=f"имя репозитория (по умолчанию {DEFAULT_REPO})")
-    emit_p.add_argument("--provenance", action="store_true", help="писать out/provenance.json.gz (страница «почему в базе»)")
+    emit_p.add_argument("--provenance", action="store_true",
+                        help="писать out/provenance.json.gz (страница «почему в базе»)")
     add_common(emit_p)
 
-    subs_p = sub.add_parser("subscriptions", help="подписки: clash-meta, v2rayn, манифест + сайт (Throne/sing-box — из шаблонов routeforge)")
+    subs_p = sub.add_parser(
+        "subscriptions",
+        help="подписки: clash-meta, v2rayn, манифест + сайт (Throne/sing-box — из шаблонов routeforge)")
     subs_p.add_argument("--owner", default=DEFAULT_OWNER, help=f"GitHub-владелец (по умолчанию {DEFAULT_OWNER})")
     subs_p.add_argument("--repo", default=DEFAULT_REPO, help=f"имя репозитория (по умолчанию {DEFAULT_REPO})")
     subs_p.add_argument("--category", default="owf", help="категория geoip/geosite.dat (по умолчанию owf)")
@@ -179,7 +186,7 @@ def _report(warnings: list[str], args: argparse.Namespace) -> int:
 def _load_domains_for_probe(input_path: Path | None, output: Path) -> list[str]:
     if input_path is not None:
         lines = input_path.read_text(encoding="utf-8").splitlines()
-        return [c for c in (sanitize_line(l) for l in lines) if c]
+        return [c for c in (sanitize_line(line) for line in lines) if c]
     entries = load_entries(output / "entries.jsonl")
     return [e.value for e in entries if e.kind == "domain"]
 
@@ -265,8 +272,8 @@ def cmd_summarize(args: argparse.Namespace, root: Path, config: Path, output: Pa
 
 
 def cmd_emit(args: argparse.Namespace, root: Path, config: Path, output: Path) -> int:
-    from . import probe as probe_mod
     from . import emit as emit_mod
+    from . import probe as probe_mod
     from .resolve import collect_ips_from_entries
 
     entries_path = output / "entries.jsonl"

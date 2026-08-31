@@ -84,7 +84,7 @@ class GeoDatTests(unittest.TestCase):
             out.mkdir()
             (out / "owf-ips.lst").write_text("1.2.3.0/24\n", encoding="utf-8")
             (out / "owf-domains.lst").write_text("example.org\n", encoding="utf-8")
-            report = geo_dat.prepare_all(root, out)
+            geo_dat.prepare_all(root, out)
             self.assertTrue((out / "convert-input" / "include-ip-owf.lst").exists())
             self.assertTrue((out / "convert-input" / "include-domain-owf.lst").exists())
             cfg = json.loads((out / "convert-input" / "owf-geoip.json").read_text(encoding="utf-8"))

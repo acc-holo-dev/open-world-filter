@@ -76,7 +76,7 @@
 
     .venv\Scripts\python -m pipeline all --offline          # только локальные community-источники
     .venv\Scripts\python -m pipeline all --workers 512 --provenance   # полный прогон
-    python -m routeforge build --root open-world-filter --strict --no-cache
+    python -m routeforge build --root . --strict --no-cache
     python -m pipeline subscriptions
 
     python -m unittest discover -s tests -v                   # тесты (stdlib)
@@ -109,9 +109,9 @@
 ## Интеграция с routeforge
 
 emit генерирует forge.toml (file:// ссылки на свежие списки); routeforge собирает
-rule-sets (.json, затем .srs в CI) и профили из open-world-filter/templates/ (Throne, sing-box):
+rule-sets (.json, затем .srs в CI) и профили из ./templates/ (Throne, sing-box):
 
-    python -m routeforge build --root open-world-filter --strict --no-cache
+    python -m routeforge build --root . --strict --no-cache
 
 ## Модель данных
 
