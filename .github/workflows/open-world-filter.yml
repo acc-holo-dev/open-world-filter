@@ -206,6 +206,9 @@ jobs:
           find owf-rule-sets owf-geo -type f | while read -r f; do
             cp "$f" "staging/$(basename "$f")"
           done
+          rm -f staging/checksums.txt
+          # checksums по фактическому составу релиза (оба исхода имели одинаковое имя — пересчёт сверху надёжнее)
+          find staging -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > staging/checksums.txt
           ls -la staging
       - name: Publish owf-latest release
         uses: softprops/action-gh-release@v2
