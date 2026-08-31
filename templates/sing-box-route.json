@@ -1,0 +1,13 @@
+{
+  "route": {
+    "rules": [
+      {
+        "$per_target": {
+          "rule_set": ["{{target_rule_sets_tags}}"],
+          "$action_fields": {}
+        }
+      }
+    ],
+    "final": "direct"
+  }
+}

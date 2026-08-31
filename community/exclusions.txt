@@ -1,0 +1,5 @@
+# Исключения: строка '!' убирает записи из результата сборки.
+# !suffix:example.com   — example.com и все поддомены
+# !domain:example.org   — только точный хост
+# !auth.example.net     — сокращение для !domain:auth.example.net
+# (поддержка keyword:/regexp: и IP/CIDR-исключений появится в M1)

@@ -1,0 +1,63 @@
+# Источники данных open-world-filter.
+# kind: domains | ips | exclusions
+# tier: auto (жёсткие доказательства) | community (правки сообщества) | heuristic (эвристика -> только флаг)
+# Удалённые источники пропускаются при --offline;
+# локальные файлы резолвятся относительно корня проекта.
+
+[[source]]
+name = "antifilter-domains"
+kind = "domains"
+tier = "auto"
+enabled = true
+url = "https://antifilter.download/list/domains.lst"
+evidence = "Реестр РКН (зеркало antifilter.download)"
+
+[[source]]
+name = "antifilter-ips"
+kind = "ips"
+tier = "auto"
+enabled = true
+url = "https://antifilter.download/list/ip.lst"
+evidence = "Реестр РКН (зеркало antifilter.download)"
+
+# Сиды из Re-filter — «недоступное из РФ» (переносим как есть, потом замещаем своим сбором).
+[[source]]
+name = "refilter-community-domains"
+kind = "domains"
+tier = "auto"
+enabled = true
+url = "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/community.lst"
+evidence = "Re-filter community.lst: ресурсы, недоступные с адресов РФ"
+
+[[source]]
+name = "refilter-community-ips"
+kind = "ips"
+tier = "auto"
+enabled = true
+url = "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/community_ips.lst"
+evidence = "Re-filter community_ips.lst: подсети, недоступные с адресов РФ"
+
+[[source]]
+name = "refilter-discord-ips"
+kind = "ips"
+tier = "auto"
+enabled = true
+url = "https://raw.githubusercontent.com/1andrevich/Re-filter-lists/main/discord_ips.lst"
+evidence = "Re-filter discord_ips.lst: подсети Discord"
+
+# Сообщество — правки через PR/issue попадают сюда.
+[[source]]
+name = "community-additions"
+kind = "domains"
+tier = "community"
+enabled = true
+file = "community/additions.txt"
+evidence = "Сообщество проекта (PR/issue)"
+
+[[source]]
+name = "community-exclusions"
+kind = "exclusions"
+tier = "community"
+enabled = true
+file = "community/exclusions.txt"
+evidence = "Сообщество проекта (PR/issue)"

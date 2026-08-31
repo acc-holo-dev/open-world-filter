@@ -1,0 +1,30 @@
+# open-world-filter: прозрачный конвейер списков блокировок РКН и недоступных из РФ ресурсов.
+[project]
+name = "open-world-filter"
+version = "0.1.0"
+description = "Свежие и прозрачные списки блокировок РКН и недоступных из РФ ресурсов: конвейер данных + правила/подписки для sing-box, Xray, Clash Meta, Hiddify, v2rayN"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+# Ядро (collect/classify/emit) работает на stdlib.
+# Пробы доступности (probe) требуют dnspython; HTTPS-пробы — aiohttp.
+dependencies = [
+  "dnspython>=2.6",
+  "aiohttp>=3.9",
+]
+
+[project.optional-dependencies]
+# ASN-аннотация (resolve --download-geolite) — опционально.
+asn = [
+  "geoip2>=4.7",
+]
+
+[project.scripts]
+owf = "pipeline.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pipeline"]

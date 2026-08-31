@@ -1,0 +1,40 @@
+{
+  "log": {
+    "level": "info"
+  },
+  "route": {
+    "auto_detect_interface": true,
+    "final": "direct",
+    "rules": [
+      {
+        "$per_target": {
+          "rule_set": ["{{target_rule_sets_tags}}"],
+          "outbound": "proxy"
+        }
+      }
+    ],
+    "rule_set": [
+      {
+        "$per_asset": {
+          "type": "remote",
+          "tag": "{{asset_tag}}",
+          "format": "binary",
+          "url": "{{asset_url}}",
+          "update_interval": "24h",
+          "download_detour": "direct"
+        }
+      }
+    ]
+  },
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "selector",
+      "tag": "proxy",
+      "outbounds": ["direct"]
+    }
+  ]
+}

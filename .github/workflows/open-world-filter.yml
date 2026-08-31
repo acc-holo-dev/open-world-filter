@@ -1,0 +1,237 @@
+# Open World Filter — конвейер данных + rule-sets + подписки + релиз + Pages.
+# Standalone-репозиторий: корень = проект. Джобы: test -> build -> (convert -> release) | pages.
+# routeforge ставится из пир-репозитория acc-holo-dev/throne-route-forge (git install).
+# Релиз публикуется на тег owf-latest.
+
+name: Open World Filter
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+env:
+  SING_BOX_VERSION: "1.13.21"
+  GO_VERSION: "1.23"
+  ROUTEFORGE_URL: "https://github.com/acc-holo-dev/throne-route-forge.git"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Unit tests (stdlib only)
+        run: python -m unittest discover -s tests -v
+      - name: Community files lint (PR-ревью)
+        run: python -m pipeline check-community
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps (probe) + routeforge
+        run: |
+          pip install dnspython aiohttp
+          pip install git+${{ env.ROUTEFORGE_URL }}
+      - name: Restore probe cache (incremental rebuilds)
+        uses: actions/cache/restore@v4
+        with:
+          path: out/probe-cache.json
+          key: owf-probe-cache-${{ github.run_id }}
+          restore-keys: |
+            owf-probe-cache-
+      - name: Download previous rule-sets (changes-report)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous-release
+          if gh release download owf-latest --pattern 'proxy-*.json' --dir previous-release --clobber; then
+            echo 'Previous rule-sets downloaded.'
+          else
+            echo 'No previous release yet — first build.'
+          fi
+      - name: Full pipeline + provenance
+        run: python -m pipeline all --provenance --workers 512 --verbose
+      - name: Prepare converter inputs (geo-dat)
+        run: python -m pipeline geo-dat
+      - name: routeforge build — rule-sets + профили (Throne/sing-box/Hiddify)
+        run: python -m routeforge build --root . --strict --no-cache --previous-dir previous-release
+      - name: Subscriptions + сайт (clash-meta, v2rayn, манифест)
+        run: python -m pipeline subscriptions
+      - name: Install sing-box (pinned, digest-verified)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          asset="sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz"
+          api="https://api.github.com/repos/SagerNet/sing-box/releases/tags/v${SING_BOX_VERSION}"
+          digest="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$api" | jq -r ".assets[] | select(.name == \"$asset\") | .digest")"
+          expected="${digest#sha256:}"
+          test -n "$expected" || { echo "no digest found for $asset" >&2; exit 1; }
+          curl -fsSL "https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/$asset" -o /tmp/sing-box.tar.gz
+          echo "$expected  /tmp/sing-box.tar.gz" | sha256sum -c -
+          mkdir -p /tmp/sing-box
+          tar -xzf /tmp/sing-box.tar.gz -C /tmp/sing-box --strip-components=1
+          sudo install -m 0755 /tmp/sing-box/sing-box /usr/local/bin/sing-box
+          sing-box version
+      - name: Compile binary rule-sets (.srs)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in release-assets/*-domains.json release-assets/*-ips.json; do
+            sing-box rule-set compile --output "${file%.json}.srs" "$file"
+          done
+      - name: Write checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          find release-assets -maxdepth 1 -type f ! -name checksums.txt ! -name .gitkeep -print0 | sort -z | xargs -0 sha256sum > release-assets/checksums.txt
+          find out/subscriptions -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > out/subscriptions/checksums.txt
+      - name: Save probe cache
+        uses: actions/cache/save@v4
+        with:
+          path: out/probe-cache.json
+          key: owf-probe-cache-${{ github.run_id }}
+          if-no-files-found: warn
+      - name: Upload artifacts (build)
+        uses: actions/upload-artifact@v4
+        with:
+          name: owf-rule-sets
+          path: |
+            release-assets/proxy-*.json
+            release-assets/proxy-*.srs
+            release-assets/route-profile-*.json
+            release-assets/sing-box-*.json
+            release-assets/build-manifest.json
+            release-assets/changes-report.json
+            release-assets/checksums.txt
+            out/subscriptions/*
+            out/provenance.json.gz
+            out/emit-report.json
+            out/ipsum.lst
+            out/owf-domains.lst
+            out/owf-ips.lst
+            out/asn-summary.json
+          if-no-files-found: error
+
+  convert:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: owf-rule-sets
+      - name: Build xray-geoip (geoip.dat)
+        run: |
+          python -m pipeline geo-dat
+          cd tools/xray-geoip && go build -o ../../out/xray-geoip .
+          ./out/xray-geoip -c out/convert-input/owf-geoip.json
+          mkdir -p release-assets
+          cp out/geo-dat/geoip.dat release-assets/geoip.dat
+          ls -la release-assets
+      - name: Build generate-geoip-geosite (geoip.db / geosite.db)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/Dunamis4tw/generate-geoip-geosite /tmp/ggg
+          cd /tmp/ggg && go build -o /tmp/ggg/gen .
+          mkdir -p out/geo-db
+          /tmp/ggg/gen -i "$GITHUB_WORKSPACE/out/convert-input" -o "$GITHUB_WORKSPACE/out/geo-db"
+          cp -f out/geo-db/*.db release-assets/ 2>/dev/null || echo 'no .db produced (check generator input naming)'
+          ls -la release-assets
+      - name: Upload artifacts (convert)
+        uses: actions/upload-artifact@v4
+        with:
+          name: owf-geo
+          path: release-assets/geo*
+          if-no-files-found: error
+
+  release:
+    needs: [build, convert]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: owf-rule-sets
+      - uses: actions/download-artifact@v4
+        with:
+          name: owf-geo
+      - name: Flatten artifacts into staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p staging
+          find owf-rule-sets owf-geo -type f | while read -r f; do
+            cp "$f" "staging/$(basename "$f")"
+          done
+          ls -la staging
+      - name: Publish owf-latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: owf-latest
+          name: Open World Filter — Routing
+          body: |
+            Автоматическая сборка open-world-filter: rule-sets (.json/.srs), профили Throne,
+            подписки Clash/Hiddify/v2rayN, geoip.dat + geoip.db/geosite.db, provenance.
+            Ссылки: https://github.com/acc-holo-dev/open-world-filter/releases/latest/download/
+          files: staging/*
+          make_latest: true
+
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: owf-rule-sets
+      - name: Assemble site (index + provenance)
+        run: |
+          python -m pipeline subscriptions
+          cp owf-rule-sets/out/provenance.json.gz site/provenance.json.gz
+          ls -la site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

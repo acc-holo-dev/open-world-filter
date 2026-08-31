@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.eggs/
+*.egg-info/
+out/
+output/
+.source-cache/
+release-assets/
+forge.toml          # генерируется 'python -m pipeline emit'
+.pytest_cache/
+.coverage

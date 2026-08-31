@@ -1,0 +1,26 @@
+{
+  "route": {
+    "rule_set": [
+      {
+        "$per_asset": {
+          "type": "remote",
+          "tag": "{{asset_tag}}",
+          "format": "binary",
+          "url": "{{asset_url}}",
+          "update_interval": "24h",
+          "download_detour": "direct"
+        }
+      },
+      {
+        "$per_extra": {
+          "type": "remote",
+          "tag": "{{extra_tag}}",
+          "format": "binary",
+          "url": "{{extra_url}}",
+          "update_interval": "24h",
+          "download_detour": "direct"
+        }
+      }
+    ]
+  }
+}

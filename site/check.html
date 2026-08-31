@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Почему в базе — Open World Filter</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;line-height:1.55}
+code{background:#f2f2f2;padding:.1em .35em;border-radius:4px;font-size:.92em}
+#q{width:70%;padding:.5em;font-size:1.05em;border:1px solid #bbb;border-radius:6px}
+button{padding:.5em 1em;font-size:1.05em;border:1px solid #1a6fb0;background:#1a6fb0;color:#fff;border-radius:6px;cursor:pointer}
+.card{border:1px solid #ddd;border-radius:8px;padding:.8em 1em;margin-top:1em}
+.meta{color:#555;font-size:.9em}
+.src{display:inline-block;background:#eef4fa;border:1px solid #c9dced;border-radius:4px;padding:.2em .5em;margin:.2em}
+table{border-collapse:collapse;margin:1em 0}td,th{border:1px solid #ddd;padding:.35em .6em;text-align:left;font-size:.95em}
+th{background:#f6f6f6}
+</style>
+</head>
+<body>
+<h1>Почему домен/IP в базе?</h1>
+<p>Введите домен или IP/CIDR — покажем provenance: откуда запись, когда получена, статус пробы.</p>
+<p><input id="q" placeholder="example.com" autocomplete="off"><button onclick="find()">Проверить</button></p>
+<div id="out"></div>
+<script>
+const DATA_URL = "provenance.json.gz";
+let DATA = null;
+
+async function loadData() {
+  try {
+    const resp = await fetch(DATA_URL);
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const buf = await resp.arrayBuffer();
+    const ds = new DecompressionStream("gzip");
+    const stream = new Response(buf).body.pipeThrough(ds);
+    const text = await new Response(stream).text();
+    DATA = JSON.parse(text);
+    document.getElementById("out").innerHTML = "<p class=\"meta\">База загружена: " +
+      Object.keys(DATA).length + " записей. Ищите домен, IP или подсеть.</p>";
+  } catch (err) {
+    document.getElementById("out").innerHTML =
+      "<p>Не удалось загрузить provenance.json.gz (релиз ещё не собран?). " + err.message + "</p>";
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+  });
+}
+
+function find() {
+  const box = document.getElementById("out");
+  if (!DATA) { box.innerHTML = "<p>База ещё загружается…</p>"; return; }
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  if (!q) return;
+  const rec = DATA[q];
+  if (!rec) { box.innerHTML = "<p>Записи \"" + esc(q) + "\" в базе нет.</p>"; return; }
+
+  let probe = "";
+  if (rec.probe) {
+    const statusMap = {alive:"жив (A-запись есть)", empty:"имя есть, A-записей нет", dead:"мёртв (NXDOMAIN)", error:"ошибка пробы"};
+    probe = "<h3>Проба DNS</h3><table><tr><th>статус</th><td>" +
+      esc(statusMap[rec.probe.status] || rec.probe.status) + "</td></tr>" +
+      (rec.probe.parked ? "<tr><th>парковка</th><td>похоже на парковку</td></tr>" : "") +
+      (rec.probe.checked_at ? "<tr><th>проверено</th><td>" + esc(rec.probe.checked_at) + "</td></tr>" : "") +
+      "</table>";
+  }
+
+  const evs = (rec.evidence || []).map(function (ev) {
+    const src = ev.source || "?";
+    return "<span class=\"src\"><b>" + esc(src) + "</b>" +
+      (ev.fetched_at ? " · " + esc(ev.fetched_at) : "") +
+      (ev.reason ? " · " + esc(ev.reason) : "") + "</span>";
+  }).join(" ") || "<span class=\"meta\">нет evidence</span>";
+
+  box.innerHTML = "<div class=\"card\"><h2>" + esc(q) + "</h2>" +
+    "<p class=\"meta\">тип: " + esc(rec.kind || "?") + " · уровень доверия: " + esc(rec.tier || "?") +
+    ((rec.flags && rec.flags.length) ? " · флаги: " + esc(rec.flags.join(", ")) : "") + "</p>" +
+    "<h3>Откуда запись</h3><p>" + evs + "</p>" + probe + "</div>";
+}
+
+loadData();
+</script>
+</body>
+</html>
