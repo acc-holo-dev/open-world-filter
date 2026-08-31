@@ -1,0 +1,31 @@
+# routeforge source catalog — known-good public raw-text lists.
+#
+# Reference these from forge.toml with `source = "<name>"` instead of pasting a
+# URL. Every entry is raw text (never a compiled .srs), with a note on format
+# and license. Review and pin (sha256) anything you enable — these are
+# suggestions, not an endorsement. Add your own in a workspace catalog.toml,
+# or send a PR to grow this file.
+
+[sources.stevenblack-hosts]
+name = "StevenBlack Unified Hosts"
+url = "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+kind = "domains"
+format = "hosts"
+license = "MIT"
+note = "Very large consolidated ad/tracker/malware blocklist in hosts format. Hosts-file boilerplate lines (localhost, self-references) are skipped automatically."
+
+[sources.oisd-small]
+name = "OISD small"
+url = "https://small.oisd.nl/"
+kind = "domains"
+format = "plain"
+license = "OISD"
+note = "Small, fast plain domain blocklist (one domain per line)."
+
+[sources.adguard-dns-filter]
+name = "AdGuard DNS Filter"
+url = "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt"
+kind = "domains"
+format = "adblock"
+license = "GPL-3.0"
+note = "AdGuard DNS-level filter: ||domain^ rules and @@ exceptions are understood by the tolerant parser."

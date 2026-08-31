@@ -99,6 +99,11 @@
 Статусы проб: alive | empty (имя есть, A нет) | dead (NXDOMAIN) | error (неизвестно — НЕ мёртвый).
 Политика emit: dead выбрасывается; empty/error/parked остаются; всё — в emit-report.json.
 
+## Вендор routeforge
+
+Для самодостаточности публичного CI копия пакета routeforge лежит в ./routeforge
+(обновляется из acc-holo-dev/throne-route-forge, репо приватное). Версия: см. git history.
+
 ## Интеграция с routeforge
 
 emit генерирует forge.toml (file:// ссылки на свежие списки); routeforge собирает

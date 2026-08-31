@@ -19,7 +19,6 @@ permissions:
 env:
   SING_BOX_VERSION: "1.13.21"
   GO_VERSION: "1.23"
-  ROUTEFORGE_URL: "https://github.com/acc-holo-dev/throne-route-forge.git"
 
 jobs:
   test:
@@ -46,10 +45,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install deps (probe) + routeforge
-        run: |
-          pip install dnspython aiohttp
-          pip install git+${{ env.ROUTEFORGE_URL }}
+      - name: Install probe deps (routeforge vendored in ./routeforge)
+        run: pip install dnspython aiohttp
       - name: Restore probe cache (incremental rebuilds)
         uses: actions/cache/restore@v4
         with:
