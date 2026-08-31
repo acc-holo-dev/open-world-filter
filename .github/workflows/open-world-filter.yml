@@ -170,10 +170,13 @@ jobs:
         run: |
           set -euo pipefail
           git clone --depth 1 https://github.com/Dunamis4tw/generate-geoip-geosite /tmp/ggg
-          cd /tmp/ggg && go build -o /tmp/ggg/gen .
+          cd /tmp/ggg
+          go build -o /tmp/ggg/gen .
+          cd "$GITHUB_WORKSPACE"
           mkdir -p out/geo-db
           /tmp/ggg/gen -i "$GITHUB_WORKSPACE/out/convert-input" -o "$GITHUB_WORKSPACE/out/geo-db"
-          cp -f out/geo-db/*.db release-assets/ 2>/dev/null || echo 'no .db produced (check generator input naming)'
+          ls -la out/geo-db
+          cp -f out/geo-db/*.db release-assets/
           ls -la release-assets
       - name: Upload artifacts (convert)
         uses: actions/upload-artifact@v4
