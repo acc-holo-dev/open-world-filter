@@ -6,8 +6,9 @@
 #   probe      пробы доступности (DNS/NS, опц. HTTPS)    -> out/probe-cache.json
 #   resolve    IP-инвентарь: кэш проб + IP-источники     -> out/ips-all.lst (+ asn-map.json)
 #   summarize  IP -> CIDR (с учётом ASN)                 -> out/ipsum.lst
-#   emit       итоговые списки + forge.toml для routeforge
+#   emit       итоговые списки + forge.toml для мастерской
 #   all        build -> probe -> resolve -> summarize -> emit
+#   добавить   добавить домен/IP/CIDR в community/additions.txt (правка -> PR)
 # Флаги (до или после команды): --root, --config, --output, --offline, --strict, --verbose.
 # Коды выхода: 0 ok, 1 предупреждения источников при --strict, 2 ошибка конфигурации.
 
@@ -90,7 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     add_common(sub.add_parser("summarize", help="IP -> CIDR (с учётом ASN, если есть asn-map.json)"))
 
-    emit_p = sub.add_parser("emit", help="итоговые списки + forge.toml для routeforge")
+    emit_p = sub.add_parser("emit", help="итоговые списки + forge.toml для мастерской")
     emit_p.add_argument("--keep-dead", action="store_true",
                         help="не выбрасывать dead-домены (политика по умолчанию: выбрасывать)")
     emit_p.add_argument("--owner", default=DEFAULT_OWNER, help=f"GitHub-владелец (по умолчанию {DEFAULT_OWNER})")
@@ -101,7 +102,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     subs_p = sub.add_parser(
         "subscriptions",
-        help="подписки: clash-meta, v2rayn, манифест + сайт (Throne/sing-box — из шаблонов routeforge)")
+        help="подписки: clash-meta, v2rayn, манифест + сайт (Throne/sing-box — из шаблонов мастерской)")
     subs_p.add_argument("--owner", default=DEFAULT_OWNER, help=f"GitHub-владелец (по умолчанию {DEFAULT_OWNER})")
     subs_p.add_argument("--repo", default=DEFAULT_REPO, help=f"имя репозитория (по умолчанию {DEFAULT_REPO})")
     subs_p.add_argument("--category", default="owf", help="категория geoip/geosite.dat (по умолчанию owf)")
@@ -114,6 +115,10 @@ def build_parser() -> argparse.ArgumentParser:
     geo_p = sub.add_parser("geo-dat", help="входы для конвертеров .dat/.db (xray-geoip, generate-geoip-geosite)")
     geo_p.add_argument("--category", default="owf", help="категория в geoip/geosite (по умолчанию owf)")
     add_common(geo_p)
+
+    add_p = sub.add_parser("добавить", help="добавить домен/IP/CIDR в community/additions.txt (правка -> PR)")
+    add_p.add_argument("value", help="домен (example.com), IP (203.0.113.5) или подсеть (203.0.113.0/24)")
+    add_common(add_p)
     return parser
 
 
@@ -364,6 +369,40 @@ def cmd_geodat(args: argparse.Namespace, root: Path, config: Path, output: Path)
     return EXIT_OK
 
 
+def cmd_add(args: argparse.Namespace, root: Path, config: Path, output: Path) -> int:
+    from .collect import detect_kind, sanitize_line
+
+    clean = sanitize_line(args.value)
+    if clean is None or detect_kind(clean) is None:
+        print(
+            f"не удалось распознать: {args.value!r}\n"
+            "добавить можно домен (example.com), IP (203.0.113.5) или подсеть (203.0.113.0/24);\n"
+            "исключения и правила — в community/exclusions.txt"
+        )
+        return EXIT_CONFIG_ERROR
+
+    path = root / "community" / "additions.txt"
+    present: set[str] = set()
+    if path.exists():
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            c = sanitize_line(raw)
+            if c:
+                present.add(c)
+    if clean in present:
+        print(f"уже в списке: {clean} (community/additions.txt) — ничего не меняю")
+        return EXIT_OK
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    with path.open("a", encoding="utf-8") as fh:
+        if text and not text.endswith("\n"):
+            fh.write("\n")
+        fh.write(clean + "\n")
+    print(f"добавлено: {clean}")
+    print("Правка добавлена в community/additions.txt — отправь PR на GitHub")
+    return EXIT_OK
+
+
 def cmd_all(args: argparse.Namespace, root: Path, config: Path, output: Path) -> int:
     verbose = _get(args, "verbose", False)
 
@@ -437,6 +476,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_check_community(args, root, config, output)
     if args.command == "geo-dat":
         return cmd_geodat(args, root, config, output)
+    if args.command == "добавить":
+        return cmd_add(args, root, config, output)
 
     # classify отдельно: читаем результат collect
     raw_path = output / "raw-entries.jsonl"

@@ -1,6 +1,6 @@
 # Open World Filter — конвейер данных + rule-sets + подписки + релиз + Pages.
 # Standalone-репозиторий: корень = проект. Джобы: test -> build -> (convert -> release) | pages.
-# routeforge vendored в ./routeforge (приватный пир-репо недоступен раннерам).
+# routeforge — зависимость из репозитория мастерской (pip install git+), см. ROUTEFORGE_URL в env.
 # Релиз публикуется на тег owf-latest.
 
 name: Open World Filter
@@ -19,6 +19,9 @@ permissions:
 env:
   SING_BOX_VERSION: "1.13.21"
   GO_VERSION: "1.23"
+  # Мастерская (routeforge-пакет; VISION/PLAN «одна стрелка зависимости»).
+  # Требует публичного репозитория; пинить на тег, когда мастерская начнёт их выпускать.
+  ROUTEFORGE_URL: "git+https://github.com/acc-holo-dev/open-world-filter-source.git"
 
 jobs:
   test:
@@ -45,7 +48,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install probe deps (routeforge vendored in ./routeforge)
+      - name: Install Python deps (probe)
         run: pip install dnspython aiohttp
       - name: Restore probe cache (incremental rebuilds)
         uses: actions/cache/restore@v4
@@ -68,8 +71,10 @@ jobs:
         run: python -m pipeline all --provenance --workers 300 --no-ns --verbose
       - name: Prepare converter inputs (geo-dat)
         run: python -m pipeline geo-dat
-      - name: routeforge build — rule-sets + профили (Throne/sing-box/Hiddify)
-        run: python -m routeforge build --root . --strict --no-cache --previous-dir previous-release
+      - name: Install routeforge (мастерская)
+        run: pip install "$ROUTEFORGE_URL"
+      - name: Собрать — rule-sets + профили (Throne/sing-box/Hiddify)
+        run: owf-source собрать --root . --strict --no-cache --previous-dir previous-release
       - name: Subscriptions + сайт (clash-meta, v2rayn, манифест)
         run: python -m pipeline subscriptions
       - name: Install sing-box (pinned, digest-verified)

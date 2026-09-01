@@ -1,8 +1,8 @@
 # Подписки/конфиги для клиентов + манифест ссылок + генерация сайта.
 #
-# Throne и sing-box/Hiddify генерирует routeforge из шаблонов open-world-filter/templates/*.json
-# (см. зовём в CI 'routeforge build' без --no-profiles).
-# Здесь — то, что DSL routeforge не покрывает:
+# Throne и sing-box/Hiddify генерирует мастерская (open-world-filter-source, команда 'owf-source собрать')
+# из шаблонов open-world-filter/templates/*.json (в CI зовём 'owf-source собрать' без --no-profiles).
+# Здесь — то, что DSL мастерской не покрывает:
 #   - clash-meta.yaml   (объектная карта rule-providers, текст-провайдеры на наши .lst)
 #   - v2rayn-routing.json (сниппет routing с ext:geoip/geosite.dat:owf)
 #   - subscriptions.json (манифест всех ссылок — его использует сайт)

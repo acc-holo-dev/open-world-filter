@@ -1,4 +1,4 @@
-# Шаг выпуска: политика + итоговые списки + forge.toml для routeforge.
+# Шаг выпуска: политика + итоговые списки + forge.toml для мастерской.
 #
 # Политика по умолчанию (прозрачность, а не молчаливые удаления):
 #  - dead (NXDOMAIN) исключается из итогового списка (--keep-dead оставляет);
@@ -84,7 +84,7 @@ def write_provenance_gz(data: dict, path: Path) -> int:
 
 
 def render_forge_toml(domains_path: Path, ips_path: Path, owner: str, repo: str) -> str:
-    """forge.toml для routeforge: цель proxy + два локальных источника (file://)."""
+    """forge.toml для мастерской: цель proxy + два локальных источника (file://)."""
     lines = [
         "# СГЕНЕРИРОВАНО 'python -m pipeline emit' — не редактируй вручную.",
         "# Источники — file:// ссылки на свежие списки конвейера;",
